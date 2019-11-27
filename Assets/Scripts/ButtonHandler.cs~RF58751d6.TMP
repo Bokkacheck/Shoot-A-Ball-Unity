@@ -1,0 +1,56 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class ButtonHandler : MonoBehaviour
+{
+    [SerializeField]
+    private GameObject bulletPrefab;
+    [SerializeField]
+    private GameObject start;
+    [SerializeField]
+    private GameObject vrh;
+    public void Shoot()
+    {
+        GameObject bullet = Instantiate(bulletPrefab, start.transform.position, start.transform.rotation);
+        bullet.transform.Rotate(90, 0, 0);
+        bullet.GetComponent<Rigidbody>().AddForce(bullet.transform.up * 400, ForceMode.Impulse);
+        StartCoroutine(ShootAnimation());
+        Destroy(bullet, 2f);
+    }
+    public IEnumerator ShootAnimation()
+    {
+        float position = 0;
+        bool full = true;
+        while (true)
+        {
+            yield return new WaitForSeconds(0.05f);
+            if (position < 1 && full)
+            {
+                position = Mathf.Lerp(position, 1.1f, 0.01f);
+            }
+            else if (position <= 0)
+            {
+                break;
+            }
+            else
+            {
+                full = false;
+                position = Mathf.Lerp(position, 0, 0.1f);
+            }
+            vrh.transform.position += (vrh.transform.up.normalized) * position;
+
+        }
+    }
+    public void StartNewGame()
+    {
+        SceneManager.LoadScene("GameScene1");
+    }
+    public void ExitGame()
+    {
+        PlayerPrefs.SetInt("Score", 0);
+        PlayerPrefs.Save();
+        Application.Quit();
+    }
+}
