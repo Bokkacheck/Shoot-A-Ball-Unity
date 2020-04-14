@@ -7,37 +7,36 @@ public class AutoAim : MonoBehaviour
 {
     public static List<GameObject> enemys = null;
     [SerializeField]
-    private Shooting shooting;
-    [SerializeField]
     private PlayerControll playerControll;
-    [SerializeField]
-    private Text txtAutoAim;
     private float counter = 0;
     private bool myEnabled = false;
     [SerializeField]
-    private LevelManager lvlManager;
-    private Quaternion rotationBeforeAutoAim;
-    private bool started = false;
+    private Button btnShoot;
 
-    public bool MyEnabled { get => myEnabled; set { myEnabled = value;StartCoroutine(TurnOffAutoAim()); } }
+    public bool MyEnabled { get => myEnabled; set {  } }
 
-    void Update()
+    public void TurnOnAutoAim()
+    {
+        if (myEnabled) return;
+        myEnabled = true;
+        playerControll.MyEnabled = false;
+        LevelManager.singleton.powerUpSound.Play();
+        btnShoot.enabled = false;
+        StartCoroutine(TurnOffAutoAim());
+    }
+
+    void FixedUpdate()
     {
         if (!myEnabled) return;
-        if (enemys == null)
+        if (enemys == null || enemys.Count==0)
         {
             return;
-        }
-        if (!started)
-        {
-            rotationBeforeAutoAim = transform.rotation;
-            started = true;
         }
         int index = 0;
         float minDistance = 1000f;
         for(int i = 0; i < enemys.Count; i++)
         {
-            if (enemys[i].transform.position.y < 0)
+            if (enemys[i].transform.position.y < 0 || enemys[i].transform.position.y>40)
             {
                 continue;
             }
@@ -56,24 +55,32 @@ public class AutoAim : MonoBehaviour
         Quaternion aimRotate = Quaternion.LookRotation(whereToShoot);
         transform.rotation = Quaternion.Slerp(transform.rotation, aimRotate, 8 * Time.deltaTime);
         counter += Time.deltaTime;
-        if (counter >= 0.1f)
+        if (counter >= 10*Time.deltaTime && minDistance<1000)
         {
             counter = 0f;
-            shooting.Shoot();
+            Shooting.singleton.Shoot();
         }
     }
     private IEnumerator TurnOffAutoAim()
     {
         int counter = 10;
+        int lvl = LevelManager.singleton.currentLevel;
         while (true)
         {
-            txtAutoAim.text = "" + counter;
+            LevelManager.singleton.txtAutoAim.text = "" + counter;
             yield return new WaitForSeconds(1f);
             if (counter-- == 0)
             {
-                lvlManager.TurnOffAutoAim();
-                transform.rotation = rotationBeforeAutoAim;
+                if (lvl == LevelManager.singleton.currentLevel)
+                {
+                    LevelManager.singleton.TurnOffAutoAim();
+                }
+                else
+                {
+                    LevelManager.singleton.TurnOnAutoAim();
+                }
                 myEnabled = false;
+                btnShoot.enabled = true;
                 break;
             }
         }

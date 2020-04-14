@@ -9,7 +9,7 @@ public class JoyStickMove : MonoBehaviour, IDragHandler, IPointerUpHandler, IPoi
     private Image backCircle;
     [SerializeField]
     private Image circle;
-    private static Vector3 inputVector = Vector3.zero;
+    public static Vector3 inputVector = Vector3.zero;
 
     public void OnDrag(PointerEventData eventData)
     {
@@ -32,9 +32,5 @@ public class JoyStickMove : MonoBehaviour, IDragHandler, IPointerUpHandler, IPoi
     {
         circle.rectTransform.anchoredPosition = Vector3.zero;
         inputVector = Vector3.zero;
-    }
-    public static Vector3 PerformMovement()
-    {
-        return  inputVector;
     }
 }

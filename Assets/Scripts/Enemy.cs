@@ -4,111 +4,91 @@ using UnityEngine.UI;
 public class Enemy : MonoBehaviour
 {
     private Transform player;
-    private Transform playerModel;
-    [SerializeField]
     private float speed = 0.5f;
-    [SerializeField]
     private Rigidbody rb;
-    private Vector3 direction;
-    public int enemyID;
-    [SerializeField]
-    private int pieces = 5;
-    [SerializeField]
-    private int enemyDamage;
-    [SerializeField]
-    private SpawnEnemy spawnEnemy;
-    [SerializeField]
-    private int maxHealth;
-    private int currentHealth; 
+    private static int pieces = 4;
+    private int maxHealth = 100;
+    private int currentHealth = 100; 
+    [HideInInspector]
     public static GameObject[,,] smallCubes = null;
     [SerializeField]
     private Material mat;
+    private Image healthBar;
     [SerializeField]
-    private Player playerScript;
-    Image healthBar;
-    [SerializeField]
-    GameObject canvas;
+    private GameObject canvas;
 
-    public int CurrentHealth { get => currentHealth; set { currentHealth = value;healthBar.fillAmount = (float)currentHealth/maxHealth;} }
+    private int id;
+
+    private int damage;
+
+    public int CurrentHealth { get => currentHealth; set { currentHealth = value; healthBar.fillAmount = (float)currentHealth/maxHealth;} }
 
     public int MaxHealth { get => maxHealth; set => maxHealth = value; }
 
+    public int Id { get => id; set => id = value; }
+
+    public static bool soundFlag = true;
+
     void Start()
     {
-        player = GameObject.Find("Player").transform;
-        playerModel = player.Find("Sphere");
-        spawnEnemy = GameObject.Find("EnemyManager").GetComponent<SpawnEnemy>();
-        playerScript = GameObject.Find("Player").GetComponent<Player>();
-        currentHealth = maxHealth;
+        GetComponent<AudioSource>().volume = MusicManager.singleton.gameVolume;
+        player = GameObject.Find("Head").transform;
+        rb = GetComponent<Rigidbody>();
         MakeHealthBar();
-        if (smallCubes == null)
-        {
-            smallCubes = new GameObject[pieces, pieces, pieces];
-            for (int i = 0; i < pieces; i++)
-                for (int j = 0; j < pieces; j++)
-                    for (int k = 0; k < pieces; k++)
-                    {
-                        if (i % 2 == 0)
-                        {
-                            smallCubes[i, j, k] = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        }
-                        else
-                        {
-                            smallCubes[i, j, k] = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        }
-                        smallCubes[i, j, k].transform.position = new Vector3(0, -300, 0);
-                        smallCubes[i, j, k].transform.localScale = new Vector3(2f, 2, 2f);
-                        smallCubes[i, j, k].AddComponent<Rigidbody>();
-                        smallCubes[i, j, k].GetComponent<MeshRenderer>().material = mat;
-                    }
-        }
-
     }
     void FixedUpdate()
     {
-        direction = player.position - transform.position;
-        direction = direction.normalized;
-        rb.AddForce(direction * speed, ForceMode.Impulse);
-
+        rb.AddForce((player.position - transform.position).normalized * speed, ForceMode.Impulse);
         canvas.transform.position = transform.position + new Vector3(0, -3, 0);
-        canvas.transform.rotation = playerModel.rotation;
+        canvas.transform.rotation = player.rotation;
     }
     void OnCollisionEnter(Collision other)
     {
         if (other.collider.tag == "Bullet")
         {
-            CurrentHealth -= 1;
+            CurrentHealth -= Player.singleton.damage;
             if (currentHealth <= 0)
             {
-                playerScript.Kills += 1;
+                if (Player.singleton.MakeKill())
+                {
+                    return;
+                }
                 Respawn();
             }
         }
         else if(other.collider.tag == "PowerShell")
         {
             CurrentHealth = 0;
-            playerScript.Kills += 1;
+            if (Player.singleton.MakeKill())
+            {
+                return;
+            }
             Respawn();
         }
         else if(other.collider.tag == "Player")
         {
-            playerScript.TakeDmg(enemyDamage);
+            Player.singleton.TakeDmg(damage);
+            StartCoroutine(SpawnEnemy.singleton.ReCreateEnemy(id));
         }
     }
     void Respawn()
     {
         SetExplosion();
-        StartCoroutine(spawnEnemy.ReCreateEnemy(enemyID));
+        StartCoroutine(SpawnEnemy.singleton.ReCreateEnemy(id));
     }
     void SetExplosion()
     {
+        if (soundFlag)
+        {
+            GetComponent<AudioSource>().Play();
+        }
+        Vector3 force = rb.velocity.normalized + Vector3.up * 8;
         for (int i = 0; i < pieces; i++)
             for (int j = 0; j < pieces; j++)
                 for (int k = 0; k < pieces; k++)
                 {
-                    smallCubes[i, j, k].GetComponent<Rigidbody>().velocity = Vector3.zero;
-                    smallCubes[i,j,k].transform.position = transform.position + new Vector3(i,j,k);
-                    smallCubes[i,j,k].GetComponent<Rigidbody>().AddForce(rb.velocity.normalized  * 5, ForceMode.Impulse);
+                    smallCubes[i, j, k].transform.position = transform.position;
+                    smallCubes[i, j, k].GetComponent<Rigidbody>().AddForce(force, ForceMode.Impulse);
                 }
     }
     void MakeHealthBar()
@@ -117,5 +97,17 @@ public class Enemy : MonoBehaviour
         healthBar = canvas.transform.Find("Image").Find("Image2").gameObject.GetComponent<Image>();
         healthBar.fillAmount = 1.0f;
     }
-
+    public void SetData(int id,int health, int damage, float speed)
+    {
+        maxHealth = health;
+        currentHealth = maxHealth;
+        this.damage = damage;
+        this.speed = speed;
+        this.id = id;
+    }
+    public void Destroy()
+    {
+        Destroy(healthBar);
+        Destroy(canvas);
+    }
 }

@@ -6,76 +6,90 @@ using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
-    [SerializeField]
     private int maxHealth = 100;
     private int health = 100;
     private int kills = 0;
-    private int deaths = 0;
+
+    [HideInInspector]
+    public int damage = 0;
+    private int numberOfLives;
+
     [SerializeField]
     private Image healthBar;
     [SerializeField]
     private Text txtKills;
     [SerializeField]
-    private Text txtDeaths;
+    private Text txtHealth;
     [SerializeField]
-    private Text txtTime;
+    private GameObject lives;
     [SerializeField]
-    private int time = 60;
+    private Image imgLive;
+    [SerializeField]
+    MeshRenderer body;
+    [SerializeField]
+    MeshRenderer helmet;
 
+    private int nextLevelKills;
 
+    public static Player singleton;
 
-    public int Kills { get => kills; set { kills = value; txtKills.text ="Kills: " + kills;} }
-    public int Deaths { get => deaths; set { deaths = value; txtDeaths.text = "Deaths: " + deaths; } }
-
-    public void Reset()
+    void Start()
     {
+        singleton = this;
+        helmet.material = body.material = ButtonHandler.selectedMaterial;
+        int healthLevel = PlayerPrefs.GetInt("HealthLevel", 1);
+        maxHealth = (int)Mathf.Pow(2f, (healthLevel - 1)) * 100;
+        damage = (int)Mathf.Pow(2f,PlayerPrefs.GetInt("DamageLevel", 1)-1);
+        numberOfLives = PlayerPrefs.GetInt("Lives", 1);
         health = maxHealth;
-        healthBar.fillAmount = (float)health / maxHealth;
-        SpawnEnemy spawnEnemy = GameObject.Find("EnemyManager").GetComponent<SpawnEnemy>();
-        List<GameObject> enemys = spawnEnemy.EnemyArray;
-        for (int i = 0; i < enemys.Count; i++)
+        for(int i = 0; i < numberOfLives; i++)
         {
-          StartCoroutine(spawnEnemy.ReCreateEnemy(i));
+            Image img = Instantiate(imgLive);
+            img.gameObject.transform.parent = lives.gameObject.transform;
         }
+        nextLevelKills = 30;
+        txtHealth.text = health + "/" + maxHealth;
+        txtKills.text = "Kills: " + kills + "/" + nextLevelKills;
     }
+
     public void TakeDmg(int dmg)
     {
+        if (health == 0)
+        {
+            return;
+        }
         health -= dmg;
-        healthBar.fillAmount = (float)health / maxHealth;
         if (health <= 0)
         {
-            PlayerPrefs.SetInt("Score", kills);
-            PlayerPrefs.Save();
-            ResetGame();
-            Enemy.smallCubes = null;
-            SceneManager.LoadScene("StartScene");
+            numberOfLives--;
+            Destroy(lives.transform.Find("LiveImage(Clone)").gameObject);
+            if (numberOfLives == 0)
+            {
+                health = 0;
+                LevelManager.singleton.GameOver(kills);
+            }
+            else
+            {
+                health = maxHealth;
+            }
         }
+        healthBar.fillAmount = (float)health / maxHealth;
+        txtHealth.text = health + "/" + maxHealth;
     }
-    public void ResetGame()
+    public bool MakeKill()
     {
-        Reset();
-        txtTime.text = "Time left: " + time;
-        time = 60;
-        kills = 0;
-        deaths = 0;
-        txtKills.text = "Kills:";
-        txtDeaths.text = "Deaths:";
+        kills++;
+        txtKills.text = "Kills: " + kills + "/" + nextLevelKills;
+        if (kills == nextLevelKills)
+        {
+            nextLevelKills += 30;
+            health = maxHealth;
+            healthBar.fillAmount = (float)health / maxHealth;
+            txtHealth.text = health + "/" + maxHealth;
+            LevelManager.singleton.NextLevel();
+            txtKills.text = "Kills: " + kills + "/" + nextLevelKills;
+            return true;
+        }
+        return false;
     }
-
-    //public IEnumerator CountDown()
-    //{
-    //    while (true)
-    //    {
-    //        yield return new WaitForSeconds(1f);
-    //        txtTime.text = "Time left: " + time;
-    //        if(--time == 0)
-    //        {
-    //            PlayerPrefs.SetInt("Score", kills);
-    //            PlayerPrefs.Save();
-    //            ResetGame();
-    //            Enemy.smallCubes = null;
-    //            SceneManager.LoadScene("StartScene");
-    //        }
-    //    }
-    //}
 }

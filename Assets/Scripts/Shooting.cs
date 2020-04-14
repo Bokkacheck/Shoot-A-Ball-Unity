@@ -8,20 +8,28 @@ public class Shooting : MonoBehaviour
     private GameObject bulletPrefab;
     [SerializeField]
     private Texture2D crosshair;
+    [SerializeField]
+    private float crosshairSize = 120f;
+    public AudioSource shootSound;
     private RaycastHit hitBefore;
-    // Update is called once per frame
-    void Update()
+    [SerializeField]
+    private Transform gunShootPoint;
+
+    public static Shooting singleton;
+    public bool drawCrosshair = true;
+
+    void Start()
     {
-        //if (Input.GetMouseButtonDown(0))
-        //{
-        //      Shoot();
-        //}
+        singleton = this;
+        shootSound.volume = MusicManager.singleton.gameVolume;
     }
+  
     public void Shoot()
     {
-        GameObject bullet = Instantiate(bulletPrefab, transform.position, transform.rotation);
+        shootSound.Play();
+        GameObject bullet = Instantiate(bulletPrefab, gunShootPoint.position, gunShootPoint.rotation);
         bullet.transform.Rotate(90, 0, 0);
-        bullet.GetComponent<Rigidbody>().AddForce(bullet.transform.up * 500, ForceMode.Impulse);
+        bullet.GetComponent<Rigidbody>().AddForce(bullet.transform.up * 400, ForceMode.Impulse);
         Destroy(bullet, 2f);
     }
     void OnGUI()
@@ -39,8 +47,12 @@ public class Shooting : MonoBehaviour
             hit.point = transform.forward * 1000;
         }
         hitBefore = hit;
+        gunShootPoint.LookAt(hit.point);
         Vector3 screenPosition = Camera.main.WorldToScreenPoint(hit.point);
         screenPosition.y = Screen.height - screenPosition.y;
-        GUI.DrawTexture(new Rect(screenPosition.x - 120.0f / 2, screenPosition.y - 120 / 2.0f, 120, 120), crosshair);
+        if (drawCrosshair)
+        {
+            GUI.DrawTexture(new Rect(screenPosition.x - crosshairSize / 2, screenPosition.y - crosshairSize / 2f, crosshairSize, crosshairSize), crosshair);
+        }
     }
 }

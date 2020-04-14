@@ -8,20 +8,25 @@ public class PowerShield : MonoBehaviour
     private bool myEnabled = false;
     [SerializeField]
     private LevelManager lvlManager;
-    public bool MyEnabled { get => myEnabled; set { myEnabled = value; } }
-
-    // Update is called once per frame
+    public void TurnOnPowerShield()
+    {
+        if (myEnabled) return;
+        myEnabled = true;
+        lvlManager.TurnOffPowerShield();
+        lvlManager.powerUpSound.Play();
+    }
     void FixedUpdate()
     {
         if (myEnabled)
         {
-            transform.localScale += new Vector3(1, 1, 1) * counter++;
-        }
-        if (counter > 250)
-        {
-            myEnabled = false;
-            lvlManager.TurnOffPowerShield();
-            Destroy(gameObject);
+            counter+=2;
+            transform.localScale += new Vector3(counter, counter, counter);
+            if (counter > 350)
+            {
+                myEnabled = false;
+                counter = 0;
+                transform.localScale = Vector3.zero;
+            }
         }
     }
 }
